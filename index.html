@@ -138,6 +138,7 @@
 
       <!-- User Auth & GitHub Pages Sync Controls -->
       <div class="flex items-center gap-2 order-2 lg:order-3">
+        <span id="cloud-status" class="notranslate"></span>
         <label class="notranslate flex items-center gap-1 px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs" translate="no" title="Idioma / Language">
           <span aria-hidden="true">🌐</span>
           <select id="lang-select" translate="no" onchange="setLanguage(this.value)" class="bg-transparent text-xs text-zinc-200 outline-none max-w-[7rem] cursor-pointer" aria-label="Idioma / Language"></select>
@@ -11831,6 +11832,7 @@
     function schedulePersist() {
       const P = _persistState();
       P.dirty = true;
+      if (window.eclionCloud && eclionCloud.schedulePush) eclionCloud.schedulePush();
       clearTimeout(P.t);
       P.t = setTimeout(persistNow, 350);
       if (db.cloudUrl && db.cloudUrl.trim().startsWith('http')) {
@@ -12456,6 +12458,13 @@
     }
 
     function requireAuth() {
+      const C = window.eclionCloud;
+      if (C && C.enabled) {
+        if (C.canWrite) return true;
+        showToast('Solo las cuentas de Google autorizadas pueden editar. Inicia sesión con Google', 'error');
+        C.signIn();
+        return false;
+      }
       if (!db.currentUser) {
         showToast('Inicia sesión con tu Usuario/Contraseña o con Google para editar en ECLION', 'error');
         openAuthModal();
@@ -12595,6 +12604,7 @@
     }
 
     function handleLogout() {
+      if (window.eclionCloud && eclionCloud.user) eclionCloud.signOut();
       const prev = db.currentUser ? db.currentUser.username : '';
       db.currentUser = null;
       persistGoogleAutoLoginSession('', false);
@@ -12625,6 +12635,7 @@
     }
 
     function isGroupOwner(grp, username) {
+      if (username === undefined && window.eclionCloud && eclionCloud.canWrite) return true;
       const u = normUser(username !== undefined ? username : (db.currentUser ? db.currentUser.username : ''));
       return !!u && getGroupOwners(grp).some(o => normUser(o) === u);
     }
@@ -16585,6 +16596,232 @@
       if (lang !== 'es') setLanguage(lang, true);
     }
 
+    // ============================================================================
+    // NUBE COMPARTIDA (Firebase Realtime Database + inicio de sesión con Google)
+    // Todos leen los mismos datos en vivo; solo cuentas autorizadas (reglas de Firebase) pueden editar.
+    // Nunca se suben usuarios ni contraseñas: solo eventos, DJs, grupos y géneros.
+    // ============================================================================
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAcgJkIFXWuR1AVF_beXEPeDJ-Cgp4FYCw",
+      authDomain: "eclionapp.firebaseapp.com",
+      databaseURL: "https://eclionapp-default-rtdb.firebaseio.com",
+      projectId: "eclionapp",
+      storageBucket: "eclionapp.firebasestorage.app",
+      messagingSenderId: "789647274773",
+      appId: "1:789647274773:web:b74479743dabba796e6f1c"
+    };
+    const FB_VER = '13.1.0';
+    const CLOUD_ROOT = 'eclion';
+    const CLOUD_COLLS = ['events', 'djs', 'groups'];
+    const cloud = window.eclionCloud = {
+      enabled: false, canWrite: false, user: null, fb: null, loaded: false,
+      applying: false, dirty: false, pushing: false, pushTimer: null, deferred: null,
+      snap: { events: {}, djs: {}, groups: {}, genres: 'null' }
+    };
+
+    const ckey = (id) => String(id).replace(/[.#$\/\[\]]/g, '_');
+    // Forma canónica (la misma que guarda Firebase: sin null ni vacíos, claves ordenadas)
+    function ccanon(v) {
+      if (v === null || v === undefined) return undefined;
+      if (Array.isArray(v)) {
+        const a = v.map(x => { const c = ccanon(x); return c === undefined ? null : c; });
+        return a.length ? a : undefined;
+      }
+      if (typeof v === 'object') {
+        const o = {};
+        Object.keys(v).sort().forEach(k => { const c = ccanon(v[k]); if (c !== undefined) o[k] = c; });
+        return Object.keys(o).length ? o : undefined;
+      }
+      if (typeof v === 'number' && !isFinite(v)) return undefined;
+      return v;
+    }
+    const cstr = (v) => { const c = ccanon(v); return JSON.stringify(c === undefined ? null : c); };
+    const cArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+
+    function cloudNorm(coll, it) {
+      if (!it || typeof it !== 'object') return null;
+      if (coll === 'djs') it.genres = cArr(it.genres);
+      if (coll === 'events') {
+        it.slots = cArr(it.slots).map(s => { if (s && typeof s === 'object') s.genres = cArr(s.genres); return s; });
+      }
+      if (coll === 'groups') ['djIds', 'ownerUsernames', 'staffUsernames'].forEach(k => { it[k] = cArr(it[k]); });
+      return it;
+    }
+
+    // Remoto -> local (el remoto manda). Solo redibuja si algo cambió de verdad.
+    function cloudApplyRemote(remote) {
+      let changed = false;
+      const snapNew = { events: {}, djs: {}, groups: {}, genres: 'null' };
+      CLOUD_COLLS.forEach(coll => {
+        const rmap = remote[coll] || {};
+        const rItems = {};
+        Object.keys(rmap).forEach(k => {
+          const it = cloudNorm(coll, rmap[k]);
+          if (it && it.id !== undefined) { const kk = ckey(it.id); rItems[kk] = it; snapNew[coll][kk] = cstr(it); }
+        });
+        const local = Array.isArray(db[coll]) ? db[coll] : [];
+        const next = [];
+        const used = new Set();
+        local.forEach(it => {
+          const k = ckey(it.id);
+          const r = rItems[k];
+          if (!r) { changed = true; return; }
+          used.add(k);
+          if (cstr(it) !== snapNew[coll][k]) { next.push(r); changed = true; } else next.push(it);
+        });
+        Object.keys(rItems).forEach(k => { if (!used.has(k)) { next.push(rItems[k]); changed = true; } });
+        if (changed || next.length !== local.length) db[coll] = next;
+      });
+      const rg = cArr(remote.genres);
+      snapNew.genres = cstr(rg);
+      if (cstr(db.genresCatalog || []) !== snapNew.genres) { db.genresCatalog = rg; changed = true; }
+      cloud.snap = snapNew;
+      if (changed) {
+        cloud.applying = true;
+        try { saveDatabase(); } finally { cloud.applying = false; }
+      }
+      return changed;
+    }
+
+    function cloudOnRemote(val) {
+      val = val || {};
+      const hasData = CLOUD_COLLS.some(c => val[c] && Object.keys(val[c]).length) || (val.genres && cArr(val.genres).length);
+      if (cloud.dirty || cloud.pushing) { cloud.deferred = val; return; }
+      if (!hasData) {
+        // Base de datos vacía: un editor autorizado la rellena con los datos locales
+        cloud.snap = { events: {}, djs: {}, groups: {}, genres: 'null' };
+        cloud.loaded = true;
+        cloud.schedulePush();
+        cloudUi();
+        return;
+      }
+      cloudApplyRemote(val);
+      cloud.loaded = true;
+      cloudUi();
+    }
+
+    // Local -> remoto: solo se envía lo que cambió (por elemento)
+    function cloudPush() {
+      cloud.pushTimer = null;
+      if (!cloud.canWrite || !cloud.loaded || !cloud.fb) { cloud.dirty = false; return; }
+      const updates = {};
+      let n = 0;
+      CLOUD_COLLS.forEach(coll => {
+        const seen = new Set();
+        (db[coll] || []).forEach(it => {
+          if (!it || it.id === undefined || it.id === null) return;
+          const k = ckey(it.id);
+          seen.add(k);
+          if (cloud.snap[coll][k] !== cstr(it)) { updates[coll + '/' + k] = ccanon(it); n++; }
+        });
+        Object.keys(cloud.snap[coll]).forEach(k => { if (!seen.has(k)) { updates[coll + '/' + k] = null; n++; } });
+      });
+      const gstr = cstr(db.genresCatalog || []);
+      if (gstr !== cloud.snap.genres) { const g = ccanon(db.genresCatalog || []); updates['genres'] = g === undefined ? null : g; n++; }
+      if (!n) { cloud.dirty = !!cloud.pushTimer; cloudFlushDeferred(); return; }
+      cloud.pushing = true;
+      cloud.fb.update(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), updates).then(() => {
+        Object.keys(updates).forEach(p => {
+          const [coll, k] = p.split('/');
+          if (coll === 'genres') { cloud.snap.genres = gstr; return; }
+          if (updates[p] === null) delete cloud.snap[coll][k]; else cloud.snap[coll][k] = cstr(updates[p]);
+        });
+      }).catch(err => {
+        showToast('No se pudo guardar en la nube: ' + ((err && (err.code || err.message)) || 'error'), 'error');
+      }).finally(() => {
+        cloud.pushing = false;
+        cloud.dirty = !!cloud.pushTimer;
+        cloudFlushDeferred();
+      });
+    }
+    function cloudFlushDeferred() {
+      if (cloud.dirty || cloud.pushing || !cloud.deferred) return;
+      const v = cloud.deferred;
+      cloud.deferred = null;
+      cloudOnRemote(v);
+    }
+    cloud.schedulePush = function () {
+      if (cloud.applying || !cloud.canWrite || !cloud.loaded) return;
+      cloud.dirty = true;
+      clearTimeout(cloud.pushTimer);
+      cloud.pushTimer = setTimeout(cloudPush, 800);
+    };
+
+    function cloudUi() {
+      const el = document.getElementById('cloud-status');
+      if (!el) return;
+      if (!cloud.enabled) { el.innerHTML = ''; return; }
+      if (!cloud.user) {
+        el.innerHTML = '<button type="button" onclick="eclionCloud.signIn()" class="px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 text-xs font-semibold" title="Inicia sesión con una cuenta de Google autorizada para editar">☁ Editar con Google</button>';
+        return;
+      }
+      const ok = cloud.canWrite;
+      el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 border ${ok ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-300'} text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>☁ ${ok ? 'Editor' : 'Solo lectura'}<button type="button" onclick="eclionCloud.signOut()" class="ml-1 text-zinc-400 hover:text-white underline">Salir</button></span>`;
+    }
+
+    function cloudSyncSession() {
+      const u = cloud.user;
+      if (cloud.canWrite && u) {
+        if (!db.currentUser) {
+          const name = (u.displayName || (u.email || 'editor').split('@')[0]).replace(/\s+/g, '_').slice(0, 32);
+          db.currentUser = { username: name, role: 'Organizador / Staff (Propietario)', cloudEmail: u.email };
+        }
+      } else if (db.currentUser && db.currentUser.cloudEmail) {
+        db.currentUser = null;
+      }
+      updateAllBadgesAndViews();
+    }
+
+    cloud.signIn = async function () {
+      if (!cloud.fb) { showToast('Conectando con la nube… inténtalo de nuevo en unos segundos', 'error'); return; }
+      try {
+        await cloud.fb.signInWithPopup(cloud.fb.auth, new cloud.fb.GoogleAuthProvider());
+      } catch (e) {
+        const c = e && e.code;
+        if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') {
+          cloud.fb.signInWithRedirect(cloud.fb.auth, new cloud.fb.GoogleAuthProvider());
+        } else if (c !== 'auth/popup-closed-by-user' && c !== 'auth/cancelled-popup-request') {
+          showToast('Error al iniciar sesión: ' + (c || (e && e.message) || 'desconocido'), 'error');
+        }
+      }
+    };
+    cloud.signOut = function () { if (cloud.fb) cloud.fb.signOut(cloud.fb.auth); };
+
+    async function initCloud() {
+      try {
+        const V = 'https://www.gstatic.com/firebasejs/' + FB_VER + '/';
+        const [appM, authM, dbM] = await Promise.all([
+          import(V + 'firebase-app.js'), import(V + 'firebase-auth.js'), import(V + 'firebase-database.js')
+        ]);
+        const app = appM.initializeApp(FIREBASE_CONFIG);
+        cloud.fb = {
+          auth: authM.getAuth(app), onAuthStateChanged: authM.onAuthStateChanged,
+          signInWithPopup: authM.signInWithPopup, signInWithRedirect: authM.signInWithRedirect,
+          GoogleAuthProvider: authM.GoogleAuthProvider, signOut: authM.signOut,
+          db: dbM.getDatabase(app), ref: dbM.ref, onValue: dbM.onValue, update: dbM.update, set: dbM.set
+        };
+        cloud.enabled = true;
+        cloudUi();
+        cloud.fb.onValue(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), (snap) => cloudOnRemote(snap.val()), (err) => {
+          showToast('No se pudo leer la nube: ' + ((err && (err.code || err.message)) || 'error'), 'error');
+        });
+        cloud.fb.onAuthStateChanged(cloud.fb.auth, async (user) => {
+          cloud.user = user || null;
+          cloud.canWrite = false;
+          if (user) {
+            // Comprueba con las reglas si esta cuenta puede escribir
+            try { await cloud.fb.set(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT + '/_check'), Date.now()); cloud.canWrite = true; }
+            catch (e) { cloud.canWrite = false; showToast('Esta cuenta de Google no está autorizada para editar (solo lectura)', 'error'); }
+          }
+          cloudUi();
+          cloudSyncSession();
+          if (cloud.canWrite) cloud.schedulePush();
+        });
+      } catch (e) {
+        console.warn('Nube no disponible, se usa solo el modo local:', e);
+      }
+    }
+
     // Initialize App on Load (with Owner-Verified Auto-Login & Real-Time Date Sync)
     window.addEventListener('DOMContentLoaded', () => {
       const cutoffInput = document.getElementById('events-cutoff-date-input');
@@ -16596,6 +16833,7 @@
       setTimeout(initRealGoogleIdentityServices, 800);
       initFileSync();
       initLanguage();
+      initCloud();
     });
   </script>
 </body>
