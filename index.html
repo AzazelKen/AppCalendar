@@ -74,6 +74,12 @@
       content-visibility: auto;
       contain-intrinsic-size: auto 150px;
     }
+    /* Traductor: oculta los elementos propios de Google */
+    body { top: 0 !important; position: static !important; }
+    .skiptranslate iframe, iframe.skiptranslate, .goog-te-banner-frame, #goog-gt-tt, .goog-tooltip, .goog-te-balloon-frame,
+    .VIpgJd-ZVi9od-ORHb-OEVmcd, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-yAWNEb-L7lbkb { display: none !important; }
+    .goog-text-highlight { background: none !important; box-shadow: none !important; }
+    #lang-select { color-scheme: dark; }
     .sg-dup { border-color: #f59e0b !important; }
     .bg-grid-pattern {
       background-image: radial-gradient(rgba(225, 29, 72, 0.12) 1px, transparent 1px);
@@ -132,6 +138,10 @@
 
       <!-- User Auth & GitHub Pages Sync Controls -->
       <div class="flex items-center gap-2 order-2 lg:order-3">
+        <label class="notranslate flex items-center gap-1 px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs" translate="no" title="Idioma / Language">
+          <span aria-hidden="true">🌐</span>
+          <select id="lang-select" translate="no" onchange="setLanguage(this.value)" class="bg-transparent text-xs text-zinc-200 outline-none max-w-[7rem] cursor-pointer" aria-label="Idioma / Language"></select>
+        </label>
         <button onclick="openSyncModal()" title="Datos, Cloud Sync y Despliegue en GitHub Pages" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-medium transition">
           <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
           <span class="hidden sm:inline">Datos / GitHub</span>
@@ -144,6 +154,7 @@
 
     </div>
   </header>
+  <div id="google_translate_element" style="display:none"></div>
 
   <!-- Edit Mode / Guest Banner -->
   <div id="auth-alert-banner" class="bg-gradient-to-r from-red-950/60 via-zinc-900 to-red-950/60 border-b border-red-500/20 px-4 py-2 text-xs">
@@ -160,7 +171,7 @@
             <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
             <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
           </svg>
-          <span id="google-live-clock-badge" class="font-mono font-semibold">Sincronizado con Google • Cargando fecha...</span>
+          <span id="google-live-clock-badge" translate="no" class="font-mono font-semibold notranslate">Sincronizado con Google • Cargando fecha...</span>
         </div>
         <span id="last-saved-indicator" class="text-[11px] text-zinc-400">Guardado automático activo</span>
       </div>
@@ -14300,7 +14311,7 @@
                   </div>
                   <div>
                     <div class="flex flex-wrap items-center gap-1.5">
-                      <h3 class="font-display text-base font-extrabold text-white group-hover:text-red-400 transition">${escapeHtml(dj.name)}</h3>
+                      <h3 translate="no" class="notranslate font-display text-base font-extrabold text-white group-hover:text-red-400 transition">${escapeHtml(dj.name)}</h3>
                       ${dj.inDocx ? `<span class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-red-600/25 text-red-300 border border-red-500/40">ROSTER OFICIAL</span>` : ''}
                     </div>
                     <p class="text-xs text-zinc-400 line-clamp-1">${escapeHtml(dj.bio || 'DJ ECLION')}</p>
@@ -15995,8 +16006,8 @@
       let text;
       try {
         if (!_clockFmtDate) {
-          _clockFmtDate = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-          _clockFmtTime = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          _clockFmtDate = new Intl.DateTimeFormat(window.__uiLocale || 'es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+          _clockFmtTime = new Intl.DateTimeFormat(window.__uiLocale || 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
         text = `Google Sync • ${_clockFmtDate.format(now)} • ${_clockFmtTime.format(now)} CET`;
       } catch (e) {
@@ -16410,7 +16421,7 @@
           const flag = f.mode === 'linkDup' ? '<span class="sg-flag">YA LO USA</span>' : (f.mode === 'detect' && r.exact) ? '<span class="sg-flag">YA EXISTE</span>'
             : (f.mode === 'detect' ? '<span class="sg-go">Abrir ›</span>'
             : (f.mode === 'navigate' ? '<span class="sg-go">Abrir ›</span>' : ''));
-          html += `<div class="sg-item" role="option" data-i="${i}"><span class="sg-badge sg-${r.it.t}">${SUG_TYPE_LABEL[r.it.t]}</span><span class="sg-main"><div class="sg-label">${sugHighlight(r.it.label, res.q)}</div>${r.it.sub ? `<div class="sg-sub">${escapeHtml(r.it.sub)}</div>` : ''}</span>${flag}</div>`;
+          html += `<div class="sg-item" role="option" data-i="${i}"><span class="sg-badge sg-${r.it.t}">${SUG_TYPE_LABEL[r.it.t]}</span><span class="sg-main"><div class="sg-label notranslate" translate="no">${sugHighlight(r.it.label, res.q)}</div>${r.it.sub ? `<div class="sg-sub">${escapeHtml(r.it.sub)}</div>` : ''}</span>${flag}</div>`;
         });
       } else if (res.free) {
         html = f.mode === 'userExact' ? '<div class="sg-free">✓ Usuario disponible</div>' : '<div class="sg-free">✓ No existe todavía — nombre libre</div>';
@@ -16485,6 +16496,95 @@
     window.addEventListener('resize', () => { if (sugVisible()) sugPosition(); });
     document.addEventListener('scroll', () => { if (sugVisible()) sugPosition(); }, { capture: true, passive: true });
 
+    // ============================================================================
+    // IDIOMAS: traducción automática de toda la web (Google Translate, se carga solo si hace falta)
+    // ============================================================================
+    const LANG_KEY = 'ECLION_LANG_V1';
+    const LANGUAGES = [
+      ['es','Español'],['en','English'],['fr','Français'],['it','Italiano'],['ja','日本語'],['de','Deutsch'],['pt','Português'],
+      ['zh-CN','中文 (简体)'],['zh-TW','中文 (繁體)'],['ko','한국어'],['ru','Русский'],['ar','العربية'],['hi','हिन्दी'],['nl','Nederlands'],
+      ['pl','Polski'],['tr','Türkçe'],['sv','Svenska'],['no','Norsk'],['da','Dansk'],['fi','Suomi'],['el','Ελληνικά'],['cs','Čeština'],
+      ['hu','Magyar'],['ro','Română'],['uk','Українська'],['vi','Tiếng Việt'],['th','ไทย'],['id','Bahasa Indonesia'],['ms','Bahasa Melayu'],
+      ['iw','עברית'],['ca','Català'],['eu','Euskara'],['gl','Galego'],['bg','Български'],['hr','Hrvatski'],['sk','Slovenčina'],
+      ['sl','Slovenščina'],['sr','Српски'],['lt','Lietuvių'],['lv','Latviešu'],['et','Eesti'],['fa','فارسی'],['bn','বাংলা'],['ur','اردو'],
+      ['ta','தமிழ்'],['te','తెలుగు'],['mr','मराठी'],['gu','ગુજરાતી'],['kn','ಕನ್ನಡ'],['ml','മലയാളം'],['pa','ਪੰਜਾਬੀ'],['sw','Kiswahili'],
+      ['af','Afrikaans'],['sq','Shqip'],['hy','Հայերեն'],['az','Azərbaycan'],['ka','ქართული'],['kk','Қазақша'],['mn','Монгол'],['ne','नेपाली'],
+      ['si','සිංහල'],['tl','Filipino'],['cy','Cymraeg'],['ga','Gaeilge'],['is','Íslenska'],['mt','Malti'],['mk','Македонски'],['bs','Bosanski'],
+      ['be','Беларуская'],['uz','Oʻzbek'],['km','ខ្មែរ'],['lo','ລາວ'],['my','မြန်မာ'],['am','አማርኛ'],['ha','Hausa'],['yo','Yorùbá'],['zu','isiZulu'],
+      ['la','Latina'],['eo','Esperanto'],['so','Soomaali'],['ps','پښتو'],['ku','Kurdî'],['ky','Кыргызча'],['tg','Тоҷикӣ']
+    ];
+    let _gtState = 'idle';
+    window.googleTranslateElementInit = function () {
+      new google.translate.TranslateElement({ pageLanguage: 'es', autoDisplay: false }, 'google_translate_element');
+      _gtState = 'ready';
+    };
+
+    function withTranslateCombo(cb) {
+      if (_gtState === 'idle') {
+        _gtState = 'loading';
+        const sc = document.createElement('script');
+        sc.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+        sc.async = true;
+        sc.onerror = () => { _gtState = 'idle'; showToast('No se pudo cargar el traductor (¿sin conexión?)', 'error'); };
+        document.head.appendChild(sc);
+      }
+      let tries = 0;
+      (function wait() {
+        const combo = document.querySelector('select.goog-te-combo');
+        if (combo) return cb(combo);
+        if (++tries < 100) setTimeout(wait, 150);
+      })();
+    }
+
+    function clearTranslateCookies() {
+      const exp = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = exp;
+      const host = location.hostname;
+      if (host) { document.cookie = exp + '; domain=' + host; document.cookie = exp + '; domain=.' + host; }
+    }
+
+    function setLanguage(code, silent) {
+      try { localStorage.setItem(LANG_KEY, code); } catch (e) {}
+      const sel = document.getElementById('lang-select');
+      if (sel && sel.value !== code) sel.value = code;
+      window.__uiLocale = code === 'es' ? 'es-ES' : code;
+      _clockFmtDate = null;
+      updateLiveGoogleClock();
+      const html = document.documentElement;
+      const translated = html.classList.contains('translated-ltr') || html.classList.contains('translated-rtl');
+      if (code === 'es') {
+        clearTranslateCookies();
+        if (translated) location.reload();
+        return;
+      }
+      withTranslateCombo((combo) => {
+        combo.value = code;
+        if (combo.value !== code) { if (!silent) showToast('Idioma no disponible en el traductor', 'error'); return; }
+        combo.dispatchEvent(new Event('change'));
+      });
+    }
+
+    function detectBrowserLanguage() {
+      const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'es';
+      const l = nav.toLowerCase();
+      if (l.startsWith('zh')) return (l.includes('tw') || l.includes('hk') || l.includes('hant')) ? 'zh-TW' : 'zh-CN';
+      const base = l.split('-')[0];
+      const map = { nb: 'no', nn: 'no', he: 'iw', fil: 'tl' };
+      const code = map[base] || base;
+      return LANGUAGES.some(x => x[0] === code) ? code : 'es';
+    }
+
+    function initLanguage() {
+      const sel = document.getElementById('lang-select');
+      if (sel) sel.innerHTML = LANGUAGES.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+      let saved = null;
+      try { saved = localStorage.getItem(LANG_KEY); } catch (e) {}
+      const lang = saved || detectBrowserLanguage();
+      if (sel) sel.value = lang;
+      window.__uiLocale = lang === 'es' ? 'es-ES' : lang;
+      if (lang !== 'es') setLanguage(lang, true);
+    }
+
     // Initialize App on Load (with Owner-Verified Auto-Login & Real-Time Date Sync)
     window.addEventListener('DOMContentLoaded', () => {
       const cutoffInput = document.getElementById('events-cutoff-date-input');
@@ -16495,6 +16595,7 @@
       updateAllBadgesAndViews();
       setTimeout(initRealGoogleIdentityServices, 800);
       initFileSync();
+      initLanguage();
     });
   </script>
 </body>
