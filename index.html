@@ -90,6 +90,28 @@
 </head>
 <body class="min-h-screen bg-[#070709] text-zinc-100 flex flex-col selection:bg-rose-600 selection:text-white">
 
+  <!-- Pantalla de acceso: hay que iniciar sesión con Google para entrar -->
+  <div id="login-gate" class="fixed inset-0 flex items-center justify-center bg-[#070709] p-6" style="z-index:200">
+    <div class="max-w-sm w-full text-center space-y-5">
+      <div class="font-display text-3xl font-bold text-white tracking-widest">ECLION</div>
+      <p id="login-gate-msg" class="text-sm text-zinc-300">Comprobando sesión…</p>
+      <button id="login-gate-btn" type="button" class="hidden w-full px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition">Entrar con Google</button>
+      <p class="text-[11px] text-zinc-500">Necesitas iniciar sesión para ver la agenda. Entras como usuario normal; los roles se asignan dentro de cada grupo.</p>
+    </div>
+  </div>
+
+  <!-- Elegir nombre de usuario (primer acceso) -->
+  <div id="modal-profile" class="fixed inset-0 hidden items-center justify-center bg-black/85 p-4" style="z-index:190">
+    <div class="bg-[#0e0e14] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-3">
+      <h3 class="font-display text-base font-bold text-white">Elige tu nombre de usuario</h3>
+      <p class="text-[11px] text-zinc-400">Es el nombre con el que te verán en los grupos. No se puede cambiar después. Entrarás como <strong class="text-white">Usuario</strong>.</p>
+      <input id="profile-username" type="text" maxlength="24" placeholder="Ej. DJ_ShadowVR" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+      <p id="profile-error" class="text-[11px] text-red-400 min-h-[1rem]"></p>
+      <button id="profile-save-btn" type="button" onclick="saveProfile()" class="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition">Guardar y entrar</button>
+      <button type="button" onclick="eclionCloud.signOut()" class="w-full text-[11px] text-zinc-400 hover:text-white underline">Salir</button>
+    </div>
+  </div>
+
   <!-- Ambient Top Glow -->
   <div class="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-64 z-0" style="background: radial-gradient(ellipse 60% 90% at 50% 0%, rgba(225,29,72,.16), rgba(127,29,29,.05) 55%, transparent 75%);"></div>
 
@@ -968,15 +990,7 @@
             <label class="block text-xs font-semibold text-zinc-300 mb-1">Nombre de Usuario / DJ *</label>
             <input id="reg-username" type="text" placeholder="Ej. DJ_ShadowVR" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-red-500" />
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-zinc-300 mb-1">Rol en ECLION</label>
-            <select id="reg-role" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
-              <option value="Organizador">Organizador / Staff</option>
-              <option value="DJ Residente">DJ Residente</option>
-              <option value="DJ Invitado">DJ Invitado</option>
-              <option value="Visuals / VJ">Visuals / VJ</option>
-            </select>
-          </div>
+          <p class="text-[11px] text-zinc-400 sm:col-span-1 self-end pb-2">Entrarás como <strong class="text-white">Usuario</strong>. Los roles (dueño, admin / staff) se asignan dentro de cada grupo.</p>
         </div>
         <div>
           <label class="block text-xs font-semibold text-zinc-300 mb-1">Contraseña *</label>
@@ -1197,30 +1211,27 @@
           <input id="group-form-link" type="text" placeholder="Ej. https://vrc.group/ECLION.0000 o https://discord.gg/eclion" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-500" />
         </div>
 
-        <!-- Dueños y Staff del Grupo -->
+        <!-- Equipo y permisos del Grupo -->
         <div id="group-modal-team-box" class="pt-3 border-t border-zinc-800 space-y-3">
           <div>
-            <h4 class="font-display text-xs sm:text-sm font-bold text-red-400 uppercase tracking-wider">Dueños y Staff del Grupo</h4>
-            <p class="text-[11px] text-zinc-400">Solo los <strong class="text-white">dueños</strong> pueden modificar este grupo y añadir más dueños o staff. El <strong class="text-white">staff</strong> aparece en el grupo pero no puede editarlo.</p>
+            <h4 class="font-display text-xs sm:text-sm font-bold text-red-400 uppercase tracking-wider">Equipo y permisos del grupo</h4>
+            <p class="text-[11px] text-zinc-400">Roles: <strong class="text-white">Dueño</strong> (control total), <strong class="text-white">Admin / Staff</strong> y <strong class="text-white">Usuario</strong>. Solo los dueños pueden cambiar roles y permisos, o eliminar el grupo.</p>
+            <p id="group-modal-team-note" class="hidden text-[11px] text-amber-300 mt-1">Solo los dueños pueden modificar roles y permisos. Aquí los ves en modo lectura.</p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <span class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Dueños</span>
-              <div id="group-modal-owners-list" class="flex flex-wrap gap-1.5"></div>
-            </div>
-            <div>
-              <span class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Staff</span>
-              <div id="group-modal-staff-list" class="flex flex-wrap gap-1.5"></div>
-            </div>
-          </div>
-          <div class="flex flex-col sm:flex-row gap-2">
-            <input id="group-team-input" list="group-team-users" type="text" placeholder="Usuario registrado (dueño) o nombre del staff" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500" />
+          <div id="group-modal-team-table" class="space-y-1.5"></div>
+          <div id="group-team-add-row" class="flex flex-col sm:flex-row gap-2">
+            <input id="group-team-input" list="group-team-users" type="text" placeholder="Usuario registrado a añadir" class="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500" />
             <datalist id="group-team-users"></datalist>
             <select id="group-team-role" class="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500">
-              <option value="staff">Staff</option>
+              <option value="user">Usuario</option>
+              <option value="admin">Admin / Staff</option>
               <option value="owner">Dueño</option>
             </select>
             <button type="button" onclick="addGroupTeamMember()" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold whitespace-nowrap transition">+ Añadir</button>
+          </div>
+          <div class="overflow-x-auto">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Permisos por rol</span>
+            <div id="group-modal-perms"></div>
           </div>
         </div>
 
@@ -11845,6 +11856,7 @@
 
     function saveDatabase(logMessage) {
       dbVersion++;
+      refreshCurrentUserRole();
       if (logMessage) {
         const now = new Date();
         const pad = (n) => String(n).padStart(2, '0');
@@ -12461,6 +12473,7 @@
       const C = window.eclionCloud;
       if (C && C.enabled) {
         if (C.canWrite) return true;
+        if (C.user) { showToast('Esta acción solo está disponible para administradores globales', 'error'); return false; }
         showToast('Solo las cuentas de Google autorizadas pueden editar. Inicia sesión con Google', 'error');
         C.signIn();
         return false;
@@ -12555,7 +12568,7 @@
 
     function handleRegister() {
       const userIn = document.getElementById('reg-username').value.trim();
-      const roleIn = document.getElementById('reg-role').value;
+      const roleIn = 'Usuario';
       const passIn = document.getElementById('reg-password').value.trim();
       const googleEmailEl = document.getElementById('reg-google-email');
       const googleEmailIn = (googleEmailEl ? googleEmailEl.value : '').trim().toLowerCase();
@@ -12634,111 +12647,277 @@
       return grp && Array.isArray(grp.staffUsernames) ? grp.staffUsernames : [];
     }
 
-    function isGroupOwner(grp, username) {
-      if (username === undefined && window.eclionCloud && eclionCloud.canWrite) return true;
+    const GROUP_PERMS = [
+      { k: 'createEvents', label: 'Crear eventos del grupo' },
+      { k: 'editEvents', label: 'Editar eventos del grupo' },
+      { k: 'deleteEvents', label: 'Eliminar eventos del grupo' },
+      { k: 'editGroupInfo', label: 'Editar datos del grupo (nombre, descripción, color, enlace)' },
+      { k: 'manageDjs', label: 'Añadir y quitar DJs del grupo' }
+    ];
+    const GROUP_ROLE_LABELS = { owner: 'Dueño', admin: 'Admin / Staff', user: 'Usuario' };
+
+    function defaultGroupPerms() {
+      const a = {}, u = {};
+      GROUP_PERMS.forEach(p => { a[p.k] = true; u[p.k] = false; });
+      return { admin: a, user: u };
+    }
+    function groupPerms(grp) {
+      const d = defaultGroupPerms();
+      const p = (grp && grp.permissions) || {};
+      ['admin', 'user'].forEach(r => GROUP_PERMS.forEach(x => {
+        if (p[r] && typeof p[r][x.k] === 'boolean') d[r][x.k] = p[r][x.k];
+      }));
+      return d;
+    }
+    function getGroupMembers(grp) {
+      return grp && Array.isArray(grp.memberUsernames) ? grp.memberUsernames : [];
+    }
+    function getUserGroupRole(grp, username) {
       const u = normUser(username !== undefined ? username : (db.currentUser ? db.currentUser.username : ''));
-      return !!u && getGroupOwners(grp).some(o => normUser(o) === u);
+      if (!u || !grp) return null;
+      if (getGroupOwners(grp).some(n => normUser(n) === u)) return 'owner';
+      if (getGroupStaff(grp).some(n => normUser(n) === u)) return 'admin';
+      if (getGroupMembers(grp).some(n => normUser(n) === u)) return 'user';
+      return null;
     }
-
+    // Administrador global = cuenta de Google autorizada en las reglas de Firebase (acceso total)
+    function isSuperEditor() {
+      const C = window.eclionCloud;
+      if (C && C.enabled) return !!C.canWrite;
+      return !!db.currentUser;
+    }
+    function isGroupOwner(grp, username) {
+      if (username === undefined && isSuperEditor()) return true;
+      return getUserGroupRole(grp, username) === 'owner';
+    }
+    function userCan(grp, perm, username) {
+      if (username === undefined && isSuperEditor()) return true;
+      const role = getUserGroupRole(grp, username);
+      if (!role) return false;
+      if (role === 'owner') return true;
+      return !!groupPerms(grp)[role][perm];
+    }
     function canManageGroup(grp) {
-      return !!db.currentUser && isGroupOwner(grp);
+      return !!db.currentUser && (isGroupOwner(grp) || userCan(grp, 'editGroupInfo') || userCan(grp, 'manageDjs'));
     }
 
+    function uidByUsername(name) {
+      const C = window.eclionCloud;
+      const dir = (C && C.users) || {};
+      const n = normUser(name);
+      const k = Object.keys(dir).find(id => dir[id] && normUser(dir[id].username) === n);
+      return k || null;
+    }
+    function findRegisteredUsername(raw) {
+      const C = window.eclionCloud;
+      const n = normUser(raw);
+      if (C && C.enabled) {
+        const hit = Object.values(C.users || {}).find(u => u && normUser(u.username) === n);
+        return hit ? hit.username : null;
+      }
+      const u = (db.users || []).find(x => normUser(x.username) === n);
+      return u ? u.username : null;
+    }
+    // Mapa uid -> rol (lo usan las reglas de Firebase para saber quién puede qué en cada grupo)
+    function buildGroupRolesMap(grp) {
+      const m = {};
+      getGroupMembers(grp).forEach(n => { const id = uidByUsername(n); if (id) m[id] = 'user'; });
+      getGroupStaff(grp).forEach(n => { const id = uidByUsername(n); if (id) m[id] = 'admin'; });
+      getGroupOwners(grp).forEach(n => { const id = uidByUsername(n); if (id) m[id] = 'owner'; });
+      return m;
+    }
+    // Etiqueta de rol global: se recalcula sola según los grupos en los que esté la persona
+    function computeRoleLabel(username) {
+      const C = window.eclionCloud;
+      if (C && C.enabled && C.canWrite) return 'Administrador global';
+      let best = 'Usuario';
+      (db.groups || []).forEach(g => {
+        const r = getUserGroupRole(g, username);
+        if (r === 'owner') best = 'Dueño';
+        else if (r === 'admin' && best === 'Usuario') best = 'Admin / Staff';
+      });
+      return best;
+    }
+    function refreshCurrentUserRole() {
+      if (db.currentUser && db.currentUser.cloudUid) db.currentUser.role = computeRoleLabel(db.currentUser.username);
+    }
+
+    function requireUser() {
+      const C = window.eclionCloud;
+      if (C && C.enabled) {
+        if (C.user && db.currentUser) return true;
+        if (C.user) { if (typeof openProfileModal === 'function') openProfileModal(); return false; }
+        C.signIn();
+        return false;
+      }
+      if (!db.currentUser) {
+        showToast('Inicia sesión para continuar', 'error');
+        openAuthModal();
+        return false;
+      }
+      return true;
+    }
     function requireGroupOwner(grp) {
-      if (!requireAuth()) return false;
+      if (!requireUser()) return false;
       if (!grp) return false;
       if (!isGroupOwner(grp)) {
-        showToast(`Solo los dueños de "${grp.name}" pueden modificar este grupo`, 'error');
+        showToast(`Solo los dueños de "${grp.name}" pueden hacer esto`, 'error');
+        return false;
+      }
+      return true;
+    }
+    function requireGroupPerm(grp, perm) {
+      if (!requireUser()) return false;
+      if (!grp) return false;
+      if (!userCan(grp, perm)) {
+        showToast(`No tienes permiso en "${grp.name}" para esta acción`, 'error');
+        return false;
+      }
+      return true;
+    }
+    function canEventPerm(ev, perm) {
+      if (isSuperEditor()) return true;
+      const g = ev && ev.groupId ? getGroupById(ev.groupId) : null;
+      return !!g && userCan(g, perm);
+    }
+    function requireEventPerm(ev, perm) {
+      if (!requireUser()) return false;
+      if (!canEventPerm(ev, perm)) {
+        showToast('No tienes permiso sobre este evento: depende de tu rol en su grupo', 'error');
         return false;
       }
       return true;
     }
 
-    function renderGroupModalTeam() {
-      const ownersEl = document.getElementById('group-modal-owners-list');
-      const staffEl = document.getElementById('group-modal-staff-list');
-      const dl = document.getElementById('group-team-users');
-      const owners = state.groupModalOwners || [];
-      const staff = state.groupModalStaff || [];
-      const founder = normUser(state.groupModalFounder);
+    function groupModalTeamEntries() {
+      const out = [];
+      (state.groupModalOwners || []).forEach(n => out.push({ name: n, role: 'owner' }));
+      (state.groupModalStaff || []).forEach(n => out.push({ name: n, role: 'admin' }));
+      (state.groupModalMembers || []).forEach(n => out.push({ name: n, role: 'user' }));
+      return out;
+    }
 
+    function renderGroupModalTeam() {
+      const tableEl = document.getElementById('group-modal-team-table');
+      const permsEl = document.getElementById('group-modal-perms');
+      const dl = document.getElementById('group-team-users');
+      const addRow = document.getElementById('group-team-add-row');
+      const note = document.getElementById('group-modal-team-note');
+      const can = !!state.groupModalCanTeam;
+      const founder = normUser(state.groupModalFounder);
+      const perms = state.groupModalPerms || defaultGroupPerms();
+
+      if (addRow) addRow.classList.toggle('hidden', !can);
+      if (note) note.classList.toggle('hidden', can);
       if (dl) {
-        dl.innerHTML = (db.users || []).map(u => `<option value="${escapeHtml(u.username)}"></option>`).join('');
+        const C = window.eclionCloud;
+        const names = C && C.enabled ? Object.values(C.users || {}).map(u => u.username) : (db.users || []).map(u => u.username);
+        dl.innerHTML = names.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
       }
-      if (ownersEl) {
-        ownersEl.innerHTML = owners.map((name, i) => {
-          const isFounder = normUser(name) === founder;
-          const tail = isFounder
-            ? '<span class="text-[9px] uppercase text-red-200/70">creador</span>'
-            : `<button type="button" onclick="removeGroupTeamMember('owner', ${i})" class="ml-1 text-red-300 hover:text-white" title="Quitar dueño">✕</button>`;
-          return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600/20 text-red-300 border border-red-500/40 text-xs font-semibold">👑 ${escapeHtml(name)} ${tail}</span>`;
-        }).join('') || '<span class="text-xs text-zinc-500 italic">Sin dueños</span>';
+      if (tableEl) {
+        const entries = groupModalTeamEntries();
+        tableEl.innerHTML = entries.map(e => {
+          const enc = encodeURIComponent(e.name);
+          const isFounder = e.role === 'owner' && normUser(e.name) === founder;
+          const roleCtl = can && !isFounder
+            ? `<select onchange="changeGroupTeamRole('${enc}', this.value)" class="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-red-500">${['owner', 'admin', 'user'].map(r => `<option value="${r}" ${r === e.role ? 'selected' : ''}>${GROUP_ROLE_LABELS[r]}</option>`).join('')}</select>`
+            : `<span class="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-300">${GROUP_ROLE_LABELS[e.role]}${isFounder ? ' · creador' : ''}</span>`;
+          const del = can && !isFounder
+            ? `<button type="button" onclick="removeGroupTeamMember('${enc}')" class="px-1.5 text-red-300 hover:text-white" title="Quitar del grupo">✕</button>`
+            : '';
+          return `<div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800"><span class="text-xs font-semibold text-white truncate">${e.role === 'owner' ? '👑 ' : ''}${escapeHtml(e.name)}</span><span class="flex items-center gap-1.5 shrink-0">${roleCtl}${del}</span></div>`;
+        }).join('') || '<span class="text-xs text-zinc-500 italic">Sin integrantes</span>';
       }
-      if (staffEl) {
-        staffEl.innerHTML = staff.map((name, i) => `
-          <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-900 text-zinc-200 border border-zinc-700 text-xs font-semibold">${escapeHtml(name)}
-            <button type="button" onclick="removeGroupTeamMember('staff', ${i})" class="ml-1 text-zinc-400 hover:text-white" title="Quitar staff">✕</button>
-          </span>`).join('') || '<span class="text-xs text-zinc-500 italic">Sin staff</span>';
+      if (permsEl) {
+        const rows = GROUP_PERMS.map(p => `
+          <tr class="border-t border-zinc-800/80">
+            <td class="py-1.5 pr-2 text-zinc-200">${escapeHtml(p.label)}</td>
+            <td class="text-center"><input type="checkbox" checked disabled class="rounded" /></td>
+            ${['admin', 'user'].map(r => `<td class="text-center"><input type="checkbox" ${perms[r] && perms[r][p.k] ? 'checked' : ''} ${can ? '' : 'disabled'} onchange="toggleGroupPerm('${r}', '${p.k}', this.checked)" class="rounded border-zinc-700 text-red-600" /></td>`).join('')}
+          </tr>`).join('');
+        permsEl.innerHTML = `
+          <table class="w-full text-[11px]">
+            <thead><tr class="text-zinc-400 uppercase tracking-wider"><th class="text-left py-1 pr-2">Permiso</th><th class="px-2">Dueño</th><th class="px-2">Admin / Staff</th><th class="px-2">Usuario</th></tr></thead>
+            <tbody>${rows}
+              <tr class="border-t border-zinc-800/80"><td class="py-1.5 pr-2 text-zinc-200">Gestionar roles y permisos · Eliminar el grupo</td><td class="text-center"><input type="checkbox" checked disabled class="rounded" /></td><td class="text-center text-zinc-600">—</td><td class="text-center text-zinc-600">—</td></tr>
+            </tbody>
+          </table>`;
       }
     }
 
+    function toggleGroupPerm(role, key, checked) {
+      if (!state.groupModalCanTeam) return;
+      state.groupModalPerms = state.groupModalPerms || defaultGroupPerms();
+      state.groupModalPerms[role] = state.groupModalPerms[role] || {};
+      state.groupModalPerms[role][key] = !!checked;
+    }
+
+    function setGroupModalRole(name, role) {
+      const rm = (arr) => (arr || []).filter(n => normUser(n) !== normUser(name));
+      state.groupModalOwners = rm(state.groupModalOwners);
+      state.groupModalStaff = rm(state.groupModalStaff);
+      state.groupModalMembers = rm(state.groupModalMembers);
+      if (role === 'owner') state.groupModalOwners.push(name);
+      else if (role === 'admin') state.groupModalStaff.push(name);
+      else state.groupModalMembers.push(name);
+    }
+
+    function changeGroupTeamRole(enc, role) {
+      if (!state.groupModalCanTeam) return;
+      const name = decodeURIComponent(enc);
+      const wasOwner = (state.groupModalOwners || []).some(n => normUser(n) === normUser(name));
+      if (wasOwner && role !== 'owner' && (state.groupModalOwners || []).length <= 1) {
+        showToast('El grupo necesita al menos un dueño', 'error');
+        renderGroupModalTeam();
+        return;
+      }
+      setGroupModalRole(name, role);
+      renderGroupModalTeam();
+    }
+
     function addGroupTeamMember() {
+      if (!state.groupModalCanTeam) return;
       const input = document.getElementById('group-team-input');
       const roleSel = document.getElementById('group-team-role');
       const raw = (input ? input.value : '').trim();
-      const role = roleSel ? roleSel.value : 'staff';
+      const role = roleSel ? roleSel.value : 'user';
       if (!raw) {
-        showToast('Escribe el usuario o nombre que quieres añadir', 'error');
+        showToast('Escribe el usuario que quieres añadir', 'error');
         return;
       }
-      state.groupModalOwners = state.groupModalOwners || [];
-      state.groupModalStaff = state.groupModalStaff || [];
-      const registered = (db.users || []).find(u => normUser(u.username) === normUser(raw));
-
-      if (role === 'owner') {
-        if (!registered) {
-          showToast('Para ser dueño, la persona debe tener una cuenta registrada en ECLION', 'error');
-          return;
-        }
-        if (state.groupModalOwners.some(n => normUser(n) === normUser(registered.username))) {
-          showToast(`${registered.username} ya es dueño de este grupo`, 'error');
-          return;
-        }
-        state.groupModalOwners.push(registered.username);
-        state.groupModalStaff = state.groupModalStaff.filter(n => normUser(n) !== normUser(registered.username));
-      } else {
-        const name = registered ? registered.username : raw;
-        if (state.groupModalOwners.some(n => normUser(n) === normUser(name))) {
-          showToast(`${name} ya es dueño de este grupo`, 'error');
-          return;
-        }
-        if (state.groupModalStaff.some(n => normUser(n) === normUser(name))) {
-          showToast(`${name} ya está en el staff`, 'error');
-          return;
-        }
-        state.groupModalStaff.push(name);
+      const registered = findRegisteredUsername(raw);
+      if (!registered) {
+        showToast('Ese usuario no está registrado: tiene que entrar a la web con Google y elegir su nombre de usuario', 'error');
+        return;
       }
+      const all = groupModalTeamEntries();
+      const current = all.find(e => normUser(e.name) === normUser(registered));
+      if (current && current.role === role) {
+        showToast(`${registered} ya tiene el rol ${GROUP_ROLE_LABELS[role]}`, 'error');
+        return;
+      }
+      setGroupModalRole(registered, role);
       if (input) input.value = '';
       renderGroupModalTeam();
     }
 
-    function removeGroupTeamMember(kind, index) {
-      if (kind === 'owner') {
-        const owners = state.groupModalOwners || [];
-        const name = owners[index];
-        if (name === undefined) return;
-        if (normUser(name) === normUser(state.groupModalFounder)) {
-          showToast('El creador del grupo no puede ser quitado como dueño', 'error');
-          return;
-        }
-        if (owners.length <= 1) {
-          showToast('El grupo necesita al menos un dueño', 'error');
-          return;
-        }
-        owners.splice(index, 1);
-      } else {
-        (state.groupModalStaff || []).splice(index, 1);
+    function removeGroupTeamMember(enc) {
+      if (!state.groupModalCanTeam) return;
+      const name = decodeURIComponent(enc);
+      const owners = state.groupModalOwners || [];
+      const isOwner = owners.some(n => normUser(n) === normUser(name));
+      if (isOwner && normUser(name) === normUser(state.groupModalFounder)) {
+        showToast('El creador del grupo no puede ser quitado', 'error');
+        return;
       }
+      if (isOwner && owners.length <= 1) {
+        showToast('El grupo necesita al menos un dueño', 'error');
+        return;
+      }
+      const rm = (arr) => (arr || []).filter(n => normUser(n) !== normUser(name));
+      state.groupModalOwners = rm(state.groupModalOwners);
+      state.groupModalStaff = rm(state.groupModalStaff);
+      state.groupModalMembers = rm(state.groupModalMembers);
       renderGroupModalTeam();
     }
 
@@ -13313,8 +13492,9 @@
 
     function toggleEventPastStatus(eventId, evtObj = null) {
       if (evtObj && evtObj.stopPropagation) evtObj.stopPropagation();
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
       const ev = db.events.find(e => e.id === eventId);
+      if (!requireEventPerm(ev, 'editEvents')) return;
       if (!ev) return;
       const currentlyPast = isEventPast(ev);
       ev.statusOverride = currentlyPast ? 'upcoming' : 'past';
@@ -13457,7 +13637,16 @@
     // EVENT MODAL LOGIC (CREATE / EDIT EVENT, GROUP IMPORT & SLOTS)
     // ============================================================================
     function openEventModal(eventId = null, defaultDate = null, presetGroupId = null, presetDjId = null) {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
+      const superEd = isSuperEditor();
+      if (!superEd && !eventId && !(db.groups || []).some(g => userCan(g, 'createEvents'))) {
+        showToast('Para crear eventos necesitas ser dueño o tener permiso en algún grupo', 'error');
+        return;
+      }
+      if (eventId) {
+        const evCheck = db.events.find(e => e.id === eventId);
+        if (evCheck && !requireEventPerm(evCheck, 'editEvents')) return;
+      }
 
       const modal = document.getElementById('modal-event');
       const titleEl = document.getElementById('modal-event-title');
@@ -13470,10 +13659,16 @@
       const slotsContainer = document.getElementById('event-slots-container');
 
       if (groupSelect) {
+        let optGroups = db.groups || [];
+        if (!superEd) {
+          const editing = eventId ? db.events.find(e => e.id === eventId) : null;
+          optGroups = optGroups.filter(g => userCan(g, 'createEvents') || (editing && editing.groupId === g.id));
+        }
         groupSelect.innerHTML = [
-          `<option value="">-- Sin grupo específico / Evento General ECLION --</option>`,
-          ...(db.groups || []).map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)} (${(g.djIds || []).length} DJs)</option>`)
+          ...(superEd ? [`<option value="">-- Sin grupo específico / Evento General ECLION --</option>`] : []),
+          ...optGroups.map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)} (${(g.djIds || []).length} DJs)</option>`)
         ].join('');
+        groupSelect.disabled = false;
       }
 
       slotsContainer.innerHTML = '';
@@ -13521,6 +13716,10 @@
         }
       }
 
+      if (groupSelect && !superEd) {
+        if (!groupSelect.value && groupSelect.options.length) groupSelect.selectedIndex = 0;
+        if (eventId) groupSelect.disabled = true;
+      }
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     }
@@ -13628,7 +13827,7 @@
     }
 
     function saveEventFromModal() {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
 
       const idVal = document.getElementById('event-form-id').value.trim();
       const nameVal = document.getElementById('event-form-name').value.trim();
@@ -13637,6 +13836,22 @@
       const notesVal = document.getElementById('event-form-notes').value.trim();
       const groupSelect = document.getElementById('event-form-group');
       const groupIdVal = groupSelect ? groupSelect.value.trim() : '';
+      const superEd = isSuperEditor();
+
+      if (!superEd) {
+        const gTarget = getGroupById(groupIdVal);
+        if (!gTarget) { showToast('Elige el grupo al que pertenece el evento', 'error'); return; }
+        if (idVal) {
+          const existingEv = db.events.find(e => e.id === idVal);
+          if (!existingEv || existingEv.groupId !== groupIdVal || !userCan(gTarget, 'editEvents')) {
+            showToast('No tienes permiso para editar este evento', 'error');
+            return;
+          }
+        } else if (!userCan(gTarget, 'createEvents')) {
+          showToast(`No tienes permiso para crear eventos en "${gTarget.name}"`, 'error');
+          return;
+        }
+      }
 
       if (!nameVal) {
         showToast('Escribe el nombre del evento', 'error');
@@ -13650,6 +13865,7 @@
       const slotRows = document.querySelectorAll('#event-slots-container .slot-row');
       const slots = [];
 
+      let blockedDj = '';
       slotRows.forEach(row => {
         const djName = row.querySelector('.slot-dj-name').value.trim();
         const genresRaw = row.querySelector('.slot-dj-genres').value.trim();
@@ -13662,13 +13878,21 @@
           ? genresRaw.split(',').map(g => g.trim()).filter(Boolean)
           : ['Hard Techno'];
 
+        let djRecord = db.djs.find(d => d.name.toLowerCase() === djName.toLowerCase());
+
+        // Cuentas que no son administrador global: solo pueden usar DJs que ya existen
+        if (!superEd) {
+          if (!djRecord) { blockedDj = blockedDj || djName; return; }
+          slots.push({ djId: djRecord.id, djName: djRecord.name, genres, startTime, endTime });
+          return;
+        }
+
         genres.forEach(g => {
           if (!db.genresCatalog.some(existing => existing.toLowerCase() === g.toLowerCase())) {
             db.genresCatalog.push(g);
           }
         });
 
-        let djRecord = db.djs.find(d => d.name.toLowerCase() === djName.toLowerCase());
         if (!djRecord) {
           djRecord = {
             id: 'dj_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -13707,6 +13931,11 @@
         });
       });
 
+      if (blockedDj) {
+        showToast(`El DJ "${blockedDj}" aún no existe: solo los administradores globales pueden crear DJs nuevos`, 'error');
+        return;
+      }
+
       if (idVal) {
         const idx = db.events.findIndex(e => e.id === idVal);
         if (idx !== -1) {
@@ -13743,9 +13972,10 @@
     }
 
     function deleteEvent(eventId) {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
       const ev = db.events.find(e => e.id === eventId);
       if (!ev) return;
+      if (!requireEventPerm(ev, 'deleteEvents')) return;
       db.events = db.events.filter(e => e.id !== eventId);
       saveDatabase(`Evento eliminado: ${ev.name} (${ev.date})`);
       showToast(`Evento "${ev.name}" eliminado`);
@@ -14720,11 +14950,13 @@
         const canEdit = canManageGroup(grp);
         const ownersList = getGroupOwners(grp);
         const staffList = getGroupStaff(grp);
+        const memberList = getGroupMembers(grp);
         const teamHtml = `
           <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
             <span class="text-zinc-400 font-bold uppercase tracking-wider">Dueños:</span>
             ${ownersList.length ? ownersList.map(n => `<span class="px-2 py-0.5 rounded-full bg-red-600/20 text-red-300 border border-red-500/30 font-semibold">👑 ${escapeHtml(n)}</span>`).join('') : '<span class="text-zinc-500 italic">sin dueño</span>'}
-            ${staffList.length ? `<span class="text-zinc-400 font-bold uppercase tracking-wider ml-2">Staff:</span>${staffList.map(n => `<span class="px-2 py-0.5 rounded-full bg-zinc-950 text-zinc-200 border border-zinc-700 font-semibold">${escapeHtml(n)}</span>`).join('')}` : ''}
+            ${staffList.length ? `<span class="text-zinc-400 font-bold uppercase tracking-wider ml-2">Admin / Staff:</span>${staffList.map(n => `<span class="px-2 py-0.5 rounded-full bg-zinc-950 text-zinc-200 border border-zinc-700 font-semibold">${escapeHtml(n)}</span>`).join('')}` : ''}
+            ${memberList.length ? `<span class="text-zinc-400 font-bold uppercase tracking-wider ml-2">Usuarios:</span>${memberList.map(n => `<span class="px-2 py-0.5 rounded-full bg-zinc-950 text-zinc-300 border border-zinc-800 font-semibold">${escapeHtml(n)}</span>`).join('')}` : ''}
           </div>`;
         const memberDjs = (grp.djIds || []).map(id => db.djs.find(d => d.id === id)).filter(Boolean);
         const connectedEvents = getGroupConnectedEvents(grp);
@@ -14869,8 +15101,7 @@
     }
 
     function quickAddDjToGroupFromCard(groupId) {
-      if (!requireAuth()) return;
-      if (!requireGroupOwner(getGroupById(groupId))) return;
+      if (!requireGroupPerm(getGroupById(groupId), 'manageDjs')) return;
       const sel = document.getElementById(`quick-add-dj-select-${groupId}`);
       if (!sel || !sel.value) {
         showToast('Selecciona un DJ del desplegable para añadirlo al grupo', 'error');
@@ -14889,8 +15120,7 @@
     }
 
     function removeDjFromGroup(groupId, djId) {
-      if (!requireAuth()) return;
-      if (!requireGroupOwner(getGroupById(groupId))) return;
+      if (!requireGroupPerm(getGroupById(groupId), 'manageDjs')) return;
       const grp = (db.groups || []).find(g => g.id === groupId);
       const dj = db.djs.find(d => d.id === djId);
       if (!grp) return;
@@ -14903,8 +15133,7 @@
     }
 
     function toggleDjGroupMembershipFromProfile(djId, groupId) {
-      if (!requireAuth()) return;
-      if (!requireGroupOwner(getGroupById(groupId))) return;
+      if (!requireGroupPerm(getGroupById(groupId), 'manageDjs')) return;
       const grp = (db.groups || []).find(g => g.id === groupId);
       const dj = db.djs.find(d => d.id === djId);
       if (!grp || !dj) return;
@@ -15185,7 +15414,7 @@
     // MODAL 8: CREATE / EDIT GROUP & ASSIGN DJS
     // ============================================================================
     function openGroupModal(groupId = null) {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
       const modal = document.getElementById('modal-group');
       const titleEl = document.getElementById('modal-group-title');
       const idIn = document.getElementById('group-form-id');
@@ -15209,7 +15438,10 @@
       if (groupId) {
         const grp = (db.groups || []).find(g => g.id === groupId);
         if (!grp) return;
-        if (!requireGroupOwner(grp)) return;
+        if (!canManageGroup(grp)) {
+          showToast(`No tienes permiso para modificar "${grp.name}"`, 'error');
+          return;
+        }
         titleEl.textContent = `Editar Grupo: ${grp.name}`;
         idIn.value = grp.id;
         nameIn.value = grp.name || '';
@@ -15221,6 +15453,11 @@
         state.groupModalOwners = [...getGroupOwners(grp)];
         state.groupModalStaff = [...getGroupStaff(grp)];
         state.groupModalFounder = grp.createdBy || state.groupModalOwners[0] || '';
+        state.groupModalMembers = [...getGroupMembers(grp)];
+        state.groupModalPerms = JSON.parse(JSON.stringify(groupPerms(grp)));
+        state.groupModalCanTeam = isGroupOwner(grp);
+        const canInfoNow = isGroupOwner(grp) || userCan(grp, 'editGroupInfo');
+        [nameIn, catIn, descIn, colorIn, linkIn].forEach(el => { if (el) el.disabled = !canInfoNow; });
       } else {
         titleEl.textContent = 'Crear Nuevo Grupo / Colectivo ECLION';
         idIn.value = '';
@@ -15233,6 +15470,10 @@
         state.groupModalOwners = [db.currentUser.username];
         state.groupModalStaff = [];
         state.groupModalFounder = db.currentUser.username;
+        state.groupModalMembers = [];
+        state.groupModalPerms = defaultGroupPerms();
+        state.groupModalCanTeam = true;
+        [nameIn, catIn, descIn, colorIn, linkIn].forEach(el => { if (el) el.disabled = false; });
       }
 
       renderGroupModalTeam();
@@ -15363,13 +15604,14 @@
     }
 
     function saveGroupFromModal() {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
       const idVal = document.getElementById('group-form-id').value.trim();
       const nameVal = document.getElementById('group-form-name').value.trim();
       const catVal = document.getElementById('group-form-category').value;
       const descVal = document.getElementById('group-form-desc').value.trim();
       const colorVal = document.getElementById('group-form-color').value;
       const linkVal = document.getElementById('group-form-link').value.trim();
+      const me = db.currentUser ? db.currentUser.username : '';
 
       if (!nameVal) {
         showToast('Escribe el nombre del grupo o colectivo', 'error');
@@ -15379,32 +15621,34 @@
       db.groups = db.groups || [];
 
       if (idVal) {
-        const existingGrp = db.groups.find(g => g.id === idVal);
-        if (!requireGroupOwner(existingGrp)) return;
-      }
-
-      const teamOwners = [...(state.groupModalOwners || [])];
-      if (teamOwners.length === 0) teamOwners.push(db.currentUser.username);
-      const teamStaff = [...(state.groupModalStaff || [])];
-
-      if (idVal) {
         const idx = db.groups.findIndex(g => g.id === idVal);
-        if (idx !== -1) {
-          db.groups[idx] = {
-            ...db.groups[idx],
-            ownerUsernames: teamOwners,
-            staffUsernames: teamStaff,
-            name: nameVal,
-            category: catVal,
-            description: descVal,
-            color: colorVal,
-            externalLink: linkVal,
-            djIds: [...(state.groupModalSelectedDjs || [])]
-          };
+        if (idx === -1) return;
+        const old = db.groups[idx];
+        const isOwner = isGroupOwner(old);
+        const canInfo = isOwner || userCan(old, 'editGroupInfo');
+        const canDjs = isOwner || userCan(old, 'manageDjs');
+        if (!canInfo && !canDjs) {
+          showToast(`No tienes permiso para modificar "${old.name}"`, 'error');
+          return;
         }
-        saveDatabase(`Grupo actualizado: ${nameVal}`);
-        showToast(`Grupo "${nameVal}" actualizado`);
+        const next = { ...old };
+        if (canInfo) Object.assign(next, { name: nameVal, category: catVal, description: descVal, color: colorVal, externalLink: linkVal });
+        if (canDjs) next.djIds = [...(state.groupModalSelectedDjs || [])];
+        if (isOwner) {
+          const owners = [...(state.groupModalOwners || [])];
+          if (owners.length === 0) owners.push(me);
+          next.ownerUsernames = owners;
+          next.staffUsernames = [...(state.groupModalStaff || [])];
+          next.memberUsernames = [...(state.groupModalMembers || [])];
+          next.permissions = JSON.parse(JSON.stringify(state.groupModalPerms || defaultGroupPerms()));
+          next.roles = buildGroupRolesMap(next);
+        }
+        db.groups[idx] = next;
+        saveDatabase(`Grupo actualizado: ${next.name}`);
+        showToast(`Grupo "${next.name}" actualizado`);
       } else {
+        const owners = [...(state.groupModalOwners || [])];
+        if (owners.length === 0) owners.push(me);
         const newGrp = {
           id: 'grp_' + Date.now(),
           name: nameVal,
@@ -15413,20 +15657,23 @@
           color: colorVal,
           externalLink: linkVal,
           djIds: [...(state.groupModalSelectedDjs || [])],
-          ownerUsernames: teamOwners,
-          staffUsernames: teamStaff,
-          createdBy: db.currentUser.username
+          ownerUsernames: owners,
+          staffUsernames: [...(state.groupModalStaff || [])],
+          memberUsernames: [...(state.groupModalMembers || [])],
+          permissions: JSON.parse(JSON.stringify(state.groupModalPerms || defaultGroupPerms())),
+          createdBy: me
         };
+        newGrp.roles = buildGroupRolesMap(newGrp);
         db.groups.push(newGrp);
         saveDatabase(`Nuevo grupo creado: ${nameVal} (${newGrp.djIds.length} DJs)`);
-        showToast(`Grupo "${nameVal}" creado con ${newGrp.djIds.length} DJs`);
+        showToast(`Grupo "${nameVal}" creado: eres su dueño`);
       }
 
       closeGroupModal();
     }
 
     function deleteGroup(groupId) {
-      if (!requireAuth()) return;
+      if (!requireUser()) return;
       const grp = (db.groups || []).find(g => g.id === groupId);
       if (!grp) return;
       if (!requireGroupOwner(grp)) return;
@@ -16613,9 +16860,18 @@
     const FB_VER = '13.1.0';
     const CLOUD_ROOT = 'eclion';
     const CLOUD_COLLS = ['events', 'djs', 'groups'];
+    // Administradores globales (el permiso real lo dan las reglas de Firebase).
+    // Aquí solo se indica el nombre de usuario sugerido (y bloqueado si lock=true, porque las reglas lo reservan).
+    const CLOUD_EDITORS = {
+      'pepeazazel@gmail.com': { name: 'AzazelKen', lock: false },
+      'arlynec21372@gmail.com': { name: 'Chiquiboo', lock: true }
+    };
+    // Equipo del grupo ECLION: se aplica una sola vez; después se respetan los cambios de los dueños.
+    const CLOUD_TEAM_SEED = { version: 'team_v1', groupId: 'grp_eclion_roster', owners: ['Chiquiboo'], djIds: ['dj_38'] };
     const cloud = window.eclionCloud = {
       enabled: false, canWrite: false, user: null, fb: null, loaded: false,
       applying: false, dirty: false, pushing: false, pushTimer: null, deferred: null,
+      authReady: false, failed: false, unsub: null, users: {}, lastRemote: null,
       snap: { events: {}, djs: {}, groups: {}, genres: 'null' }
     };
 
@@ -16644,7 +16900,7 @@
       if (coll === 'events') {
         it.slots = cArr(it.slots).map(s => { if (s && typeof s === 'object') s.genres = cArr(s.genres); return s; });
       }
-      if (coll === 'groups') ['djIds', 'ownerUsernames', 'staffUsernames'].forEach(k => { it[k] = cArr(it[k]); });
+      if (coll === 'groups') ['djIds', 'ownerUsernames', 'staffUsernames', 'memberUsernames'].forEach(k => { it[k] = cArr(it[k]); });
       return it;
     }
 
@@ -16683,54 +16939,160 @@
       return changed;
     }
 
+    // Solo administradores globales: aplica el equipo inicial una vez y mantiene el mapa uid->rol de cada grupo
+    function cloudEnsureTeam() {
+      if (!cloud.canWrite || !cloud.loaded) return;
+      let changed = false;
+      const S = CLOUD_TEAM_SEED;
+      const g0 = (db.groups || []).find(x => x.id === S.groupId);
+      if (g0 && g0.teamSeed !== S.version) {
+        g0.ownerUsernames = cArr(g0.ownerUsernames);
+        S.owners.forEach(name => {
+          if (!g0.ownerUsernames.some(o => normUser(o) === normUser(name))) g0.ownerUsernames.push(name);
+        });
+        g0.djIds = cArr(g0.djIds);
+        S.djIds.forEach(id => {
+          if ((db.djs || []).some(d => d.id === id) && !g0.djIds.includes(id)) g0.djIds.push(id);
+        });
+        g0.teamSeed = S.version;
+        changed = true;
+      }
+      const dirReady = Object.keys(cloud.users || {}).length > 0;
+      (db.groups || []).forEach(g => {
+        if (!g.permissions) { g.permissions = defaultGroupPerms(); changed = true; }
+        if (dirReady) {
+          const m = buildGroupRolesMap(g);
+          if (cstr(m) !== cstr(g.roles || {})) { g.roles = m; changed = true; }
+        }
+      });
+      if (changed) saveDatabase('Equipo y roles de grupos actualizados');
+    }
+
+    function cloudGate() {
+      const g = document.getElementById('login-gate');
+      if (!g) return;
+      const msg = document.getElementById('login-gate-msg');
+      const btn = document.getElementById('login-gate-btn');
+      if (cloud.user) { g.classList.add('hidden'); g.classList.remove('flex'); return; }
+      g.classList.remove('hidden'); g.classList.add('flex');
+      if (cloud.failed) {
+        msg.textContent = 'No se pudo conectar con la nube. Revisa tu conexión e inténtalo de nuevo.';
+        btn.textContent = 'Reintentar';
+        btn.onclick = () => location.reload();
+        btn.classList.remove('hidden');
+      } else if (!cloud.authReady) {
+        msg.textContent = 'Comprobando sesión…';
+        btn.classList.add('hidden');
+      } else {
+        msg.textContent = 'Inicia sesión con tu cuenta de Google para entrar.';
+        btn.textContent = 'Entrar con Google';
+        btn.onclick = () => cloud.signIn();
+        btn.classList.remove('hidden');
+      }
+    }
+
+    function cloudListen() {
+      if (cloud.unsub || !cloud.fb) return;
+      cloud.unsub = cloud.fb.onValue(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), (snap) => cloudOnRemote(snap.val()), (err) => {
+        cloud.unsub = null;
+        showToast('No se pudo leer la nube: ' + ((err && (err.code || err.message)) || 'error'), 'error');
+      });
+    }
+    function cloudUnlisten() {
+      if (cloud.unsub) { try { cloud.unsub(); } catch (e) {} cloud.unsub = null; }
+      cloud.loaded = false;
+    }
+
     function cloudOnRemote(val) {
       val = val || {};
+      cloud.users = val.users || {};
+      cloud.lastRemote = val;
       const hasData = CLOUD_COLLS.some(c => val[c] && Object.keys(val[c]).length) || (val.genres && cArr(val.genres).length);
       if (cloud.dirty || cloud.pushing) { cloud.deferred = val; return; }
       if (!hasData) {
         // Base de datos vacía: un editor autorizado la rellena con los datos locales
         cloud.snap = { events: {}, djs: {}, groups: {}, genres: 'null' };
         cloud.loaded = true;
-        cloud.schedulePush();
+        if (cloud.canWrite) cloud.schedulePush();
         cloudUi();
+        cloudSyncSession();
         return;
       }
       cloudApplyRemote(val);
       cloud.loaded = true;
       cloudUi();
+      cloudSyncSession();
+      cloudEnsureTeam();
     }
 
-    // Local -> remoto: solo se envía lo que cambió (por elemento)
+    // Local -> remoto: solo se envía lo que cambió (por elemento; los grupos, campo a campo)
     function cloudPush() {
       cloud.pushTimer = null;
-      if (!cloud.canWrite || !cloud.loaded || !cloud.fb) { cloud.dirty = false; return; }
+      if (!cloud.user || !cloud.loaded || !cloud.fb) { cloud.dirty = false; return; }
+      const isSuper = cloud.canWrite;
       const updates = {};
+      const pend = {};
       let n = 0;
-      CLOUD_COLLS.forEach(coll => {
+      const colls = isSuper ? CLOUD_COLLS : ['events', 'groups'];
+      colls.forEach(coll => {
         const seen = new Set();
         (db[coll] || []).forEach(it => {
           if (!it || it.id === undefined || it.id === null) return;
           const k = ckey(it.id);
           seen.add(k);
-          if (cloud.snap[coll][k] !== cstr(it)) { updates[coll + '/' + k] = ccanon(it); n++; }
+          const cur = cstr(it);
+          const prev = cloud.snap[coll][k];
+          if (prev === cur) return;
+          if (coll === 'groups' && prev !== undefined) {
+            let old = {};
+            try { old = JSON.parse(prev) || {}; } catch (e) { old = {}; }
+            const now = ccanon(it) || {};
+            Object.keys(Object.assign({}, old, now)).forEach(f => {
+              if (cstr(old[f]) !== cstr(now[f])) { updates['groups/' + k + '/' + f] = now[f] === undefined ? null : now[f]; n++; }
+            });
+          } else {
+            updates[coll + '/' + k] = ccanon(it);
+            n++;
+          }
+          pend[coll + '/' + k] = cur;
         });
-        Object.keys(cloud.snap[coll]).forEach(k => { if (!seen.has(k)) { updates[coll + '/' + k] = null; n++; } });
+        Object.keys(cloud.snap[coll]).forEach(k => {
+          if (!seen.has(k)) { updates[coll + '/' + k] = null; pend[coll + '/' + k] = null; n++; }
+        });
       });
       const gstr = cstr(db.genresCatalog || []);
-      if (gstr !== cloud.snap.genres) { const g = ccanon(db.genresCatalog || []); updates['genres'] = g === undefined ? null : g; n++; }
+      if (isSuper && gstr !== cloud.snap.genres) {
+        const g = ccanon(db.genresCatalog || []);
+        updates['genres'] = g === undefined ? null : g;
+        n++;
+      }
       if (!n) { cloud.dirty = !!cloud.pushTimer; cloudFlushDeferred(); return; }
       cloud.pushing = true;
-      cloud.fb.update(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), updates).then(() => {
-        Object.keys(updates).forEach(p => {
-          const [coll, k] = p.split('/');
-          if (coll === 'genres') { cloud.snap.genres = gstr; return; }
-          if (updates[p] === null) delete cloud.snap[coll][k]; else cloud.snap[coll][k] = cstr(updates[p]);
-        });
-      }).catch(err => {
-        showToast('No se pudo guardar en la nube: ' + ((err && (err.code || err.message)) || 'error'), 'error');
-      }).finally(() => {
+      const byColl = {};
+      Object.keys(updates).forEach(p => { const c = p.split('/')[0]; (byColl[c] = byColl[c] || {})[p] = updates[p]; });
+      const ref = cloud.fb.ref(cloud.fb.db, CLOUD_ROOT);
+      let failed = false;
+      Promise.all(Object.keys(byColl).map(c =>
+        cloud.fb.update(ref, byColl[c]).then(() => {
+          Object.keys(pend).forEach(pk => {
+            const parts = pk.split('/');
+            if (parts[0] !== c) return;
+            if (pend[pk] === null) delete cloud.snap[parts[0]][parts[1]]; else cloud.snap[parts[0]][parts[1]] = pend[pk];
+          });
+          if (c === 'genres') cloud.snap.genres = gstr;
+        }).catch(err => {
+          failed = true;
+          showToast('No se pudo guardar en la nube: ' + ((err && (err.code || err.message)) || 'error') + (isSuper ? '' : ' (no tienes permiso para ese cambio)'), 'error');
+        })
+      )).finally(() => {
         cloud.pushing = false;
         cloud.dirty = !!cloud.pushTimer;
+        if (failed && !isSuper) {
+          // Vuelve a la versión real de la nube para no dejar cambios locales que no se guardaron
+          const v = cloud.deferred || cloud.lastRemote;
+          cloud.deferred = null;
+          if (v) cloudApplyRemote(v);
+        }
         cloudFlushDeferred();
       });
     }
@@ -16741,7 +17103,7 @@
       cloudOnRemote(v);
     }
     cloud.schedulePush = function () {
-      if (cloud.applying || !cloud.canWrite || !cloud.loaded) return;
+      if (cloud.applying || !cloud.user || !cloud.loaded) return;
       cloud.dirty = true;
       clearTimeout(cloud.pushTimer);
       cloud.pushTimer = setTimeout(cloudPush, 800);
@@ -16756,20 +17118,77 @@
         return;
       }
       const ok = cloud.canWrite;
-      el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 border ${ok ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-300'} text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>☁ ${ok ? 'Editor' : 'Solo lectura'}<button type="button" onclick="eclionCloud.signOut()" class="ml-1 text-zinc-400 hover:text-white underline">Salir</button></span>`;
+      el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 border ${ok ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-300'} text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>☁ ${ok ? 'Admin global' : 'Usuario'}<button type="button" onclick="eclionCloud.signOut()" class="ml-1 text-zinc-400 hover:text-white underline">Salir</button></span>`;
     }
 
     function cloudSyncSession() {
       const u = cloud.user;
-      if (cloud.canWrite && u) {
-        if (!db.currentUser) {
-          const name = (u.displayName || (u.email || 'editor').split('@')[0]).replace(/\s+/g, '_').slice(0, 32);
-          db.currentUser = { username: name, role: 'Organizador / Staff (Propietario)', cloudEmail: u.email };
-        }
-      } else if (db.currentUser && db.currentUser.cloudEmail) {
-        db.currentUser = null;
+      if (!u) {
+        if (db.currentUser && db.currentUser.cloudUid) { db.currentUser = null; updateAllBadgesAndViews(); }
+        return;
       }
+      if (!cloud.loaded) return;
+      const prof = (cloud.users || {})[u.uid];
+      if (!prof || !prof.username) {
+        if (db.currentUser && db.currentUser.cloudUid) db.currentUser = null;
+        openProfileModal();
+        return;
+      }
+      closeProfileModal();
+      const role = computeRoleLabel(prof.username);
+      const cur = db.currentUser;
+      if (cur && cur.cloudUid === u.uid && cur.username === prof.username && cur.role === role) return;
+      db.currentUser = { username: prof.username, role, cloudEmail: u.email, cloudUid: u.uid };
       updateAllBadgesAndViews();
+    }
+
+    function openProfileModal() {
+      const m = document.getElementById('modal-profile');
+      const u = cloud.user;
+      if (!m || !u || !m.classList.contains('hidden')) return;
+      const ed = CLOUD_EDITORS[(u.email || '').toLowerCase()];
+      const input = document.getElementById('profile-username');
+      const base = (ed && ed.name) || (u.displayName || (u.email || '').split('@')[0] || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 24);
+      input.value = base;
+      input.readOnly = !!(ed && ed.lock);
+      document.getElementById('profile-error').textContent = '';
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeProfileModal() {
+      const m = document.getElementById('modal-profile');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+    }
+    async function saveProfile() {
+      const u = cloud.user;
+      if (!u || !cloud.fb) return;
+      const input = document.getElementById('profile-username');
+      const err = document.getElementById('profile-error');
+      const btn = document.getElementById('profile-save-btn');
+      const name = (input.value || '').trim();
+      if (!/^[A-Za-z0-9_-]{2,24}$/.test(name)) {
+        err.textContent = 'Usa de 2 a 24 caracteres: letras, números, guion o guion bajo (sin espacios).';
+        return;
+      }
+      const lower = name.toLowerCase();
+      const taken = Object.keys(cloud.users || {}).some(id => id !== u.uid && cloud.users[id] && String(cloud.users[id].username).toLowerCase() === lower);
+      if (taken) { err.textContent = 'Ese nombre de usuario ya está en uso.'; return; }
+      btn.disabled = true;
+      err.textContent = '';
+      try {
+        const upd = {};
+        upd['users/' + u.uid] = { username: name, createdAt: Date.now() };
+        upd['usernames/' + lower] = u.uid;
+        await cloud.fb.update(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), upd);
+        cloud.users = Object.assign({}, cloud.users, { [u.uid]: { username: name } });
+        closeProfileModal();
+        cloudSyncSession();
+        showToast(`¡Bienvenido, ${name}! Entras como Usuario`);
+      } catch (e) {
+        err.textContent = 'No se pudo guardar el nombre: puede que ya esté cogido o esté reservado.';
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     cloud.signIn = async function () {
@@ -16801,24 +17220,31 @@
           db: dbM.getDatabase(app), ref: dbM.ref, onValue: dbM.onValue, update: dbM.update, set: dbM.set
         };
         cloud.enabled = true;
+        cloud.failed = false;
         cloudUi();
-        cloud.fb.onValue(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT), (snap) => cloudOnRemote(snap.val()), (err) => {
-          showToast('No se pudo leer la nube: ' + ((err && (err.code || err.message)) || 'error'), 'error');
-        });
         cloud.fb.onAuthStateChanged(cloud.fb.auth, async (user) => {
+          cloud.authReady = true;
+          cloud.failed = false;
           cloud.user = user || null;
           cloud.canWrite = false;
           if (user) {
+            cloudListen(); // las reglas exigen sesión iniciada para leer
             // Comprueba con las reglas si esta cuenta puede escribir
             try { await cloud.fb.set(cloud.fb.ref(cloud.fb.db, CLOUD_ROOT + '/_check'), Date.now()); cloud.canWrite = true; }
-            catch (e) { cloud.canWrite = false; showToast('Esta cuenta de Google no está autorizada para editar (solo lectura)', 'error'); }
+            catch (e) { cloud.canWrite = false; }
+          } else {
+            cloudUnlisten();
           }
           cloudUi();
+          cloudGate();
           cloudSyncSession();
           if (cloud.canWrite) cloud.schedulePush();
+          cloudEnsureTeam();
         });
       } catch (e) {
-        console.warn('Nube no disponible, se usa solo el modo local:', e);
+        console.warn('No se pudo conectar con la nube:', e);
+        cloud.failed = true;
+        cloudGate();
       }
     }
 
@@ -16833,7 +17259,9 @@
       setTimeout(initRealGoogleIdentityServices, 800);
       initFileSync();
       initLanguage();
+      cloudGate();
       initCloud();
+      setTimeout(() => { if (!cloud.authReady) { cloud.failed = true; cloudGate(); } }, 15000);
     });
   </script>
 </body>
