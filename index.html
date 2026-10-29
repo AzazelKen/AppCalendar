@@ -16864,7 +16864,8 @@
     // Aquí solo se indica el nombre de usuario sugerido (y bloqueado si lock=true, porque las reglas lo reservan).
     const CLOUD_EDITORS = {
       'pepeazazel@gmail.com': { name: 'AzazelKen', lock: false },
-      'arlynec21372@gmail.com': { name: 'Chiquiboo', lock: true }
+      'arlynec21372@gmail.com': { name: 'Chiquiboo', lock: true },
+      'eric.hoehenwarter@outlook.de': { name: 'Mellana', lock: true }
     };
     // Equipo del grupo ECLION: se aplica una sola vez; después se respetan los cambios de los dueños.
     const CLOUD_TEAM_SEED = { version: 'team_v1', groupId: 'grp_eclion_roster', owners: ['Chiquiboo'], djIds: ['dj_38'] };
@@ -17171,7 +17172,11 @@
         return;
       }
       const lower = name.toLowerCase();
-      const taken = Object.keys(cloud.users || {}).some(id => id !== u.uid && cloud.users[id] && String(cloud.users[id].username).toLowerCase() === lower);
+      // Si el nombre está reservado para este correo (CLOUD_EDITORS con lock), las reglas de Firebase
+      // ya garantizan que solo este correo puede usarlo: se ignoran entradas antiguas de otro uid.
+      const reserved = CLOUD_EDITORS[(u.email || '').toLowerCase()];
+      const isReservedForMe = !!(reserved && reserved.lock && reserved.name.toLowerCase() === lower);
+      const taken = !isReservedForMe && Object.keys(cloud.users || {}).some(id => id !== u.uid && cloud.users[id] && String(cloud.users[id].username).toLowerCase() === lower);
       if (taken) { err.textContent = 'Ese nombre de usuario ya está en uso.'; return; }
       btn.disabled = true;
       err.textContent = '';
@@ -17185,7 +17190,10 @@
         cloudSyncSession();
         showToast(`¡Bienvenido, ${name}! Entras como Usuario`);
       } catch (e) {
-        err.textContent = 'No se pudo guardar el nombre: puede que ya esté cogido o esté reservado.';
+        console.warn('saveProfile error:', e);
+        err.textContent = (e && e.code === 'PERMISSION_DENIED' || /permission_denied/i.test(String(e && e.message)))
+          ? 'Firebase rechazó el nombre (ya está cogido, reservado para otro correo, o tu correo no está verificado).'
+          : 'No se pudo guardar el nombre: ' + ((e && e.message) || 'error desconocido');
       } finally {
         btn.disabled = false;
       }
