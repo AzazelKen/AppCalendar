@@ -17152,7 +17152,7 @@
       const base = (ed && ed.name) || (u.displayName || (u.email || '').split('@')[0] || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 24);
       input.value = base;
       input.readOnly = !!(ed && ed.lock);
-      document.getElementById('profile-error').textContent = '';
+      document.getElementById('profile-error').textContent = 'Sesión iniciada como: ' + (u.email || '?');
       m.classList.remove('hidden');
       m.classList.add('flex');
     }
@@ -17192,7 +17192,7 @@
       } catch (e) {
         console.warn('saveProfile error:', e);
         err.textContent = (e && e.code === 'PERMISSION_DENIED' || /permission_denied/i.test(String(e && e.message)))
-          ? 'Firebase rechazó el nombre (ya está cogido, reservado para otro correo, o tu correo no está verificado).'
+          ? 'Firebase rechazó el nombre. Sesión: ' + (u.email || '?') + ' | verificado: ' + u.emailVerified + ' | nombre: ' + name + ' | uid: ' + u.uid
           : 'No se pudo guardar el nombre: ' + ((e && e.message) || 'error desconocido');
       } finally {
         btn.disabled = false;
